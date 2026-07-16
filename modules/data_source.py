@@ -119,10 +119,19 @@ class UpstoxDataSource(BaseDataSource):
         }
 
     def _instrument_key(self, symbol: str) -> str:
-        if symbol not in self.SYMBOL_MAP:
-            raise ValueError(f"No instrument_key mapping for '{symbol}'. Add it to SYMBOL_MAP "
-                              f"(verify against Upstox's instrument master CSV first).")
-        return self.SYMBOL_MAP[symbol]
+        if symbol in self.SYMBOL_MAP:
+            return self.SYMBOL_MAP[symbol]
+        if "|" in symbol:
+            # Already looks like a raw instrument_key (e.g. from search_symbol()),
+            # such as "NSE_EQ|INE002A01018" or "MCX_FO|123456" -- use it directly.
+            return symbol
+        raise ValueError(f"No instrument_key mapping for '{symbol}'. Add it to SYMBOL_MAP, "
+                          f"or pass a raw instrument_key (use search_symbol() to find one).")
+
+    def search_symbol(self, query: str, segment: str = None, instrument_type: str = None) -> list:
+        """Search the full instrument master by name/trading_symbol (see modules/instrument_search.py)."""
+        from modules.instrument_search import search_instruments
+        return search_instruments(query, segment=segment, instrument_type=instrument_type)
 
     def _fetch_candles(self, symbol: str, unit: str, interval_value: int,
                         from_date: str, to_date: str) -> pd.DataFrame:

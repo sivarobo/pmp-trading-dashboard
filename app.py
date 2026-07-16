@@ -29,14 +29,66 @@ st.set_page_config(page_title="PMP Trading Suite", layout="wide", page_icon="�
 st.sidebar.title("⚙️ PMP Trading Suite")
 st.sidebar.caption("Phase 1 — Regime Dashboard")
 
-symbol = st.sidebar.selectbox("Symbol", ["NIFTY 50", "NIFTY BANK", "SENSEX"], index=0)
-lookback_days = st.sidebar.slider("Intraday history (days)", 1, 5, 3)
+PRESET_SYMBOLS = ["NIFTY 50", "NIFTY BANK", "SENSEX"]
+
+if "custom_symbol" not in st.session_state:
+    st.session_state["custom_symbol"] = None
+if "custom_symbol_label" not in st.session_state:
+    st.session_state["custom_symbol_label"] = None
 
 data_mode = os.environ.get("DATA_SOURCE", "mock")
+
+symbol = st.sidebar.selectbox("Symbol (index presets)", PRESET_SYMBOLS, index=0)
+lookback_days = st.sidebar.slider("Intraday history (days)", 1, 5, 3)
+
 if data_mode == "mock":
     st.sidebar.warning("⚠️ Running on MOCK data. Set DATA_SOURCE=kite once the API key is added.")
 else:
     st.sidebar.success(f"✅ Live data source: {data_mode.upper()}")
+
+# ---------------------------------------------------------------------------
+# Search any stock or MCX commodity (Gold/Silver/Crude/etc.) -- Upstox only
+# ---------------------------------------------------------------------------
+if data_mode == "upstox":
+    with st.sidebar.expander("🔍 Search stocks / commodities"):
+        search_query = st.text_input("e.g. RELIANCE, GOLD, SILVER, CRUDEOIL", key="search_box")
+        seg_choice = st.radio("Type", ["Stocks (NSE)", "Commodities (MCX)"], horizontal=True)
+
+        if search_query:
+            ds_search = get_data_source()
+            segment = "NSE_EQ" if seg_choice == "Stocks (NSE)" else "MCX_FO"
+            itype = "EQ" if seg_choice == "Stocks (NSE)" else "FUT"
+            try:
+                matches = ds_search.search_symbol(search_query, segment=segment, instrument_type=itype)
+            except Exception as e:
+                matches = []
+                st.error(f"Search failed: {e}")
+
+            if matches:
+                labels = [f"{m['trading_symbol']} — {m['name']}" +
+                          (f" (exp {m['expiry']})" if m.get("expiry") else "")
+                          for m in matches]
+                picked = st.selectbox("Matches (nearest expiry first for futures)", labels)
+                picked_idx = labels.index(picked)
+
+                if st.button("Use this symbol"):
+                    st.session_state["custom_symbol"] = matches[picked_idx]["instrument_key"]
+                    st.session_state["custom_symbol_label"] = matches[picked_idx]["trading_symbol"]
+                    st.rerun()
+            else:
+                st.caption("No matches yet — keep typing, or check spelling.")
+
+        if st.session_state["custom_symbol"]:
+            st.success(f"Active: {st.session_state['custom_symbol_label']}")
+            if st.button("Clear custom symbol"):
+                st.session_state["custom_symbol"] = None
+                st.session_state["custom_symbol_label"] = None
+                st.rerun()
+
+# A selected custom symbol overrides the preset dropdown
+if st.session_state["custom_symbol"]:
+    symbol = st.session_state["custom_symbol"]
+    st.sidebar.info(f"Showing: **{st.session_state['custom_symbol_label']}** (custom)")
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Modules 2-9 (Option Chain, Greeks, Journal, Risk Manager) ship in Phase 2 & 3.")
