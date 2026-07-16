@@ -28,7 +28,16 @@ def get_positions() -> pd.DataFrame:
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("SELECT * FROM greek_positions ORDER BY created_at DESC")
         rows = cur.fetchall()
-    return pd.DataFrame(rows) if rows else pd.DataFrame()
+    df = pd.DataFrame(rows) if rows else pd.DataFrame()
+    if not df.empty:
+        # psycopg2 returns Postgres NUMERIC columns as Decimal, which doesn't mix
+        # with float/numpy arithmetic elsewhere -- normalize to float right here.
+        for col in ("strike", "entry_premium"):
+            if col in df.columns:
+                df[col] = df[col].astype(float)
+        if "quantity" in df.columns:
+            df["quantity"] = df["quantity"].astype(int)
+    return df
 
 
 def delete_position(position_id: int):
