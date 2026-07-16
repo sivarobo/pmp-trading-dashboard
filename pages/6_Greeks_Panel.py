@@ -50,22 +50,40 @@ tab_positions, tab_portfolio, tab_add = st.tabs(["📋 Positions", "📊 Portfol
 # Add Position
 # ---------------------------------------------------------------------------
 with tab_add:
-    st.caption("Add each leg of your current position. Strike must exist in the live "
-               "option chain to compute Greeks against it.")
+    st.caption("Pick a strike from the live option chain — premium auto-fills from LTP, "
+               "editable before saving in case your actual fill price differs.")
 
-    with st.form("add_position_form", clear_on_submit=True):
-        col1, col2, col3 = st.columns(3)
+    if chain_df.empty:
+        st.warning("Live option chain unavailable — cannot populate strikes right now.")
+    else:
+        available_strikes = sorted(chain_df["strike_price"].unique().tolist())
+
+        # These live OUTSIDE any st.form so picking a strike/type immediately
+        # updates the auto-filled premium below (forms don't allow that reactivity).
+        col1, col2 = st.columns(2)
         with col1:
-            strike = st.number_input("Strike", min_value=0.0, step=50.0)
-            option_type = st.selectbox("Type", ["CE", "PE"])
+            strike = st.selectbox("Strike", available_strikes,
+                                   index=min(range(len(available_strikes)),
+                                             key=lambda i: abs(available_strikes[i] - (spot_price or 0))))
         with col2:
-            transaction = st.selectbox("Transaction", ["SELL", "BUY"])
-            quantity = st.number_input("Quantity (total)", min_value=1, value=75, step=1)
-        with col3:
-            entry_premium = st.number_input("Entry premium (₹)", min_value=0.0, step=0.5)
-            expiry = st.date_input("Expiry", value=date.today())
+            option_type = st.selectbox("Type", ["CE", "PE"])
 
-        if st.form_submit_button("Add Leg", use_container_width=True):
+        strike_row = chain_df[chain_df["strike_price"] == strike]
+        prefix = "ce" if option_type == "CE" else "pe"
+        live_premium = float(strike_row.iloc[0][f"{prefix}_ltp"]) if not strike_row.empty else 0.0
+
+        col3, col4, col5 = st.columns(3)
+        with col3:
+            transaction = st.selectbox("Transaction", ["SELL", "BUY"])
+        with col4:
+            quantity = st.number_input("Quantity (total)", min_value=1, value=75, step=1)
+        with col5:
+            entry_premium = st.number_input("Entry premium (₹) — auto-filled from LTP, editable",
+                                             min_value=0.0, value=live_premium, step=0.5)
+
+        expiry = st.date_input("Expiry", value=date.today())
+
+        if st.button("Add Leg", use_container_width=True):
             add_position(strike, option_type, transaction, int(quantity),
                          entry_premium or None, expiry, symbol)
             st.success(f"Added {transaction} {option_type} {strike:.0f}")
