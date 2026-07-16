@@ -18,6 +18,7 @@ from modules.data_source import get_data_source
 from modules.indicators import (
     calculate_vwap, calculate_cpr, prev_day_high_low,
     classify_gap, initial_balance, detect_regime,
+    weekly_high_low, volume_confirmation,
 )
 from modules.chart import build_regime_chart, build_plain_chart
 
@@ -165,6 +166,8 @@ else:
     cpr, gap, prev_row = {}, {}, None
 
 pdh_pdl = prev_day_high_low(daily_df, pd.Timestamp(selected_date))
+weekly_hl = weekly_high_low(daily_df, pd.Timestamp(selected_date))
+vol_confirm = volume_confirmation(intraday_df)
 regime = detect_regime(day_df, day_vwap, ib, cpr)
 
 # ---------------------------------------------------------------------------
@@ -172,7 +175,7 @@ regime = detect_regime(day_df, day_vwap, ib, cpr)
 # ---------------------------------------------------------------------------
 st.title("📊 Regime Dashboard")
 
-badge_cols = st.columns(5)
+badge_cols = st.columns(6)
 
 verdict_color = {
     "Trend Day (Bullish)": "🟢",
@@ -199,6 +202,15 @@ with badge_cols[3]:
 with badge_cols[4]:
     st.metric("Session VWAP", f"{day_vwap.iloc[-1]:.2f}")
 
+with badge_cols[5]:
+    if vol_confirm["ratio"] is not None:
+        icon = "✅" if vol_confirm["confirmed"] else "⚠️"
+        st.metric("Volume", f"{icon} {vol_confirm['ratio']}x avg",
+                   help=f"Module 4.5: breakout needs ≥1.5x the last 20-bar average volume. "
+                        f"Latest: {vol_confirm['latest_volume']:,.0f}, Avg: {vol_confirm['avg_volume']:,.0f}")
+    else:
+        st.metric("Volume", "—", help="Not enough bars yet for a 20-period average.")
+
 st.markdown("---")
 
 # ---------------------------------------------------------------------------
@@ -207,7 +219,7 @@ st.markdown("---")
 chart_col, signal_col = st.columns([3, 1])
 
 with chart_col:
-    fig = build_regime_chart(day_df, day_vwap, cpr, pdh_pdl, ib,
+    fig = build_regime_chart(day_df, day_vwap, cpr, pdh_pdl, ib, weekly_hl=weekly_hl,
                               title=f"{symbol_display_name} — 15 Min — {selected_date}")
     st.plotly_chart(fig, use_container_width=True, config={
         "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "eraseshape"],
@@ -248,7 +260,7 @@ st.markdown("---")
 # Levels table
 # ---------------------------------------------------------------------------
 st.subheader("📐 Key Levels")
-level_cols = st.columns(6)
+level_cols = st.columns(8)
 level_data = [
     ("CPR Pivot", cpr.get("pivot", "—")),
     ("CPR TC", cpr.get("tc", "—")),
@@ -256,6 +268,8 @@ level_data = [
     ("PDH", pdh_pdl.get("pdh", "—")),
     ("PDL", pdh_pdl.get("pdl", "—")),
     ("IB Range", f"{ib.get('ib_low','—')} – {ib.get('ib_high','—')}"),
+    ("Weekly High", weekly_hl.get("wh", "—")),
+    ("Weekly Low", weekly_hl.get("wl", "—")),
 ]
 for col, (label, val) in zip(level_cols, level_data):
     col.metric(label, val)

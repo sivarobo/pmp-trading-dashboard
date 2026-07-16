@@ -166,6 +166,28 @@ def initial_balance(df: pd.DataFrame, session_date, ib_minutes: int = 60) -> dic
     }
 
 
+def volume_confirmation(intraday_df: pd.DataFrame, lookback: int = 20, multiplier: float = 1.5) -> dict:
+    """
+    Module 4.5: breakout candle volume should exceed `multiplier`x the average
+    of the preceding `lookback` candles to be considered confirmed (not a low-volume trap).
+    """
+    df = intraday_df.sort_values("datetime").reset_index(drop=True)
+    if len(df) < lookback + 1:
+        return {"confirmed": None, "latest_volume": None, "avg_volume": None, "ratio": None}
+
+    avg_vol = df["volume"].iloc[-(lookback + 1):-1].mean()
+    latest_vol = df["volume"].iloc[-1]
+    ratio = (latest_vol / avg_vol) if avg_vol > 0 else None
+    confirmed = ratio is not None and ratio >= multiplier
+
+    return {
+        "confirmed": confirmed,
+        "latest_volume": latest_vol,
+        "avg_volume": round(avg_vol, 0),
+        "ratio": round(ratio, 2) if ratio is not None else None,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Regime Detection -- Module 1.1 / 1.2 (signal counting engine)
 # ---------------------------------------------------------------------------

@@ -30,7 +30,8 @@ def build_plain_chart(df: pd.DataFrame, title: str = "Chart") -> go.Figure:
 
 
 def build_regime_chart(day_df: pd.DataFrame, vwap: pd.Series, cpr: dict,
-                        pdh_pdl: dict, ib: dict, title: str = "NIFTY 50 — 15 Min") -> go.Figure:
+                        pdh_pdl: dict, ib: dict, weekly_hl: dict = None,
+                        title: str = "NIFTY 50 — 15 Min") -> go.Figure:
     fig = go.Figure()
 
     # --- Candlesticks ---
@@ -74,6 +75,17 @@ def build_regime_chart(day_df: pd.DataFrame, vwap: pd.Series, cpr: dict,
         fig.add_hline(y=pdh_pdl["pdl"], line_color="#ce93d8", line_dash="dashdot", line_width=1,
                       annotation_text="PDL", annotation_position="right",
                       annotation_font_size=10, annotation_font_color="#ce93d8")
+
+    # --- Weekly High / Low ---
+    if weekly_hl:
+        if weekly_hl.get("wh"):
+            fig.add_hline(y=weekly_hl["wh"], line_color="#ff8a65", line_dash="longdash", line_width=1.2,
+                          annotation_text="WH", annotation_position="right",
+                          annotation_font_size=10, annotation_font_color="#ff8a65")
+        if weekly_hl.get("wl"):
+            fig.add_hline(y=weekly_hl["wl"], line_color="#ff8a65", line_dash="longdash", line_width=1.2,
+                          annotation_text="WL", annotation_position="right",
+                          annotation_font_size=10, annotation_font_color="#ff8a65")
 
     # --- Initial Balance shading ---
     if ib.get("ib_high") and ib.get("ib_low"):
