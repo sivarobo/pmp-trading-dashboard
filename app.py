@@ -209,7 +209,10 @@ chart_col, signal_col = st.columns([3, 1])
 with chart_col:
     fig = build_regime_chart(day_df, day_vwap, cpr, pdh_pdl, ib,
                               title=f"{symbol_display_name} — 15 Min — {selected_date}")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={
+        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "eraseshape"],
+        "displaylogo": False,
+    })
 
 with signal_col:
     st.subheader("🎯 Confluence Signals")
