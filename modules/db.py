@@ -19,35 +19,23 @@ import psycopg2
 import psycopg2.extras
 
 
-@st.cache_resource
-def _create_connection():
+def get_connection():
+    """
+    Opens a fresh connection per call rather than caching one across Streamlit
+    reruns. Neon's serverless compute auto-suspends aggressively after idle time,
+    which was causing cached connections to die mid-session in ways that were
+    hard to detect reliably (stale connection, SSL EOF, etc.). A fresh connection
+    per call sidesteps all of that -- the overhead is negligible for this app's
+    usage pattern (occasional page loads, not high-frequency queries).
+    """
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:
         raise EnvironmentError(
             "Set DATABASE_URL env var (Neon Postgres connection string) before using "
             "the Trading Journal / Risk Manager. See modules/db.py docstring for setup steps."
         )
-    conn = psycopg2.connect(db_url)
+    conn = psycopg2.connect(db_url, connect_timeout=10)
     conn.autocommit = True
-    return conn
-
-
-def get_connection():
-    """
-    Neon's serverless compute auto-suspends after idle time, which silently closes
-    cached connections. This checks the cached connection is actually alive and
-    transparently reconnects if Neon has dropped it, instead of raising
-    'connection already closed' on every subsequent page load.
-    """
-    conn = _create_connection()
-    try:
-        if conn.closed != 0:
-            raise psycopg2.InterfaceError("connection closed")
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1")
-    except (psycopg2.OperationalError, psycopg2.InterfaceError):
-        _create_connection.clear()
-        conn = _create_connection()
     return conn
 
 
