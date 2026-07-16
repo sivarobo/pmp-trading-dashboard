@@ -151,11 +151,50 @@ class UpstoxDataSource(BaseDataSource):
         df = df.sort_values("datetime").reset_index(drop=True)
         return df[["datetime", "open", "high", "low", "close", "volume"]]
 
+    def _fetch_today_candles(self, symbol: str, unit: str, interval_value: int) -> pd.DataFrame:
+        """
+        The regular historical-candle endpoint does NOT include today's live data --
+        Upstox requires the separate /intraday/ endpoint for the current trading day.
+        Returns an empty DataFrame (not an error) if today's data isn't available yet
+        (e.g. before market open, or on a non-trading day).
+        """
+        instrument_key = self._instrument_key(symbol)
+        url = f"https://api.upstox.com/v3/historical-candle/intraday/{instrument_key}/{unit}/{interval_value}"
+        try:
+            resp = self._requests.get(url, headers=self._headers, timeout=15)
+            resp.raise_for_status()
+            payload = resp.json()
+        except Exception:
+            return pd.DataFrame(columns=["datetime", "open", "high", "low", "close", "volume"])
+
+        candles = payload.get("data", {}).get("candles", [])
+        if not candles:
+            return pd.DataFrame(columns=["datetime", "open", "high", "low", "close", "volume"])
+
+        df = pd.DataFrame(candles, columns=["datetime", "open", "high", "low", "close", "volume", "oi"])
+        df["datetime"] = pd.to_datetime(df["datetime"])
+        df = df.sort_values("datetime").reset_index(drop=True)
+        return df[["datetime", "open", "high", "low", "close", "volume"]]
+
     def get_intraday_candles(self, symbol: str, interval: str = "15minute", days: int = 3) -> pd.DataFrame:
         unit, val = self.INTERVAL_MAP.get(interval, ("minutes", 15))
-        to_date = pd.Timestamp.now().strftime("%Y-%m-%d")
+
+        # Historical part: up to and including yesterday (today isn't in this endpoint's data)
+        yesterday = (pd.Timestamp.now() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
         from_date = (pd.Timestamp.now() - pd.Timedelta(days=days)).strftime("%Y-%m-%d")
-        return self._fetch_candles(symbol, unit, val, from_date, to_date)
+        historical_df = self._fetch_candles(symbol, unit, val, from_date, yesterday)
+
+        # Live part: today's candles so far, via the separate intraday endpoint.
+        # Not meaningful for week/month bars, so skip those to avoid a pointless extra call.
+        if unit in ("minutes", "hours", "days"):
+            today_df = self._fetch_today_candles(symbol, unit, val)
+        else:
+            today_df = pd.DataFrame(columns=["datetime", "open", "high", "low", "close", "volume"])
+
+        combined = pd.concat([historical_df, today_df], ignore_index=True)
+        if not combined.empty:
+            combined = combined.drop_duplicates(subset="datetime").sort_values("datetime").reset_index(drop=True)
+        return combined
 
     def get_daily_candles(self, symbol: str, days: int = 30) -> pd.DataFrame:
         to_date = pd.Timestamp.now().strftime("%Y-%m-%d")
