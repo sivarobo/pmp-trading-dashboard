@@ -8,6 +8,27 @@ import plotly.graph_objects as go
 import pandas as pd
 
 
+def build_plain_chart(df: pd.DataFrame, title: str = "Chart") -> go.Figure:
+    """Simple candlestick chart without VWAP/CPR/PDH-PDL overlays -- for daily/weekly/monthly
+    timeframes where those session-based concepts don't apply."""
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(
+        x=df["datetime"] if "datetime" in df.columns else df["date"],
+        open=df["open"], high=df["high"], low=df["low"], close=df["close"],
+        increasing_line_color="#26a69a", decreasing_line_color="#ef5350",
+        increasing_fillcolor="#26a69a", decreasing_fillcolor="#ef5350",
+        name="Price",
+    ))
+    fig.update_layout(
+        title=title, template="plotly_dark", paper_bgcolor="#131722", plot_bgcolor="#131722",
+        xaxis_rangeslider_visible=False, height=560, margin=dict(l=10, r=60, t=40, b=10),
+        font=dict(size=11),
+    )
+    fig.update_xaxes(showgrid=True, gridcolor="#2a2e39")
+    fig.update_yaxes(showgrid=True, gridcolor="#2a2e39")
+    return fig
+
+
 def build_regime_chart(day_df: pd.DataFrame, vwap: pd.Series, cpr: dict,
                         pdh_pdl: dict, ib: dict, title: str = "NIFTY 50 — 15 Min") -> go.Figure:
     fig = go.Figure()

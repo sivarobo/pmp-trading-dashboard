@@ -103,7 +103,10 @@ class UpstoxDataSource(BaseDataSource):
         "15minute": ("minutes", 15),
         "5minute": ("minutes", 5),
         "1minute": ("minutes", 1),
+        "60minute": ("hours", 1),
         "day": ("days", 1),
+        "week": ("weeks", 1),
+        "month": ("months", 1),
     }
 
     def __init__(self):

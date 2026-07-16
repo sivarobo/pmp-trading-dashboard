@@ -19,7 +19,7 @@ from modules.indicators import (
     calculate_vwap, calculate_cpr, prev_day_high_low,
     classify_gap, initial_balance, detect_regime,
 )
-from modules.chart import build_regime_chart
+from modules.chart import build_regime_chart, build_plain_chart
 
 st.set_page_config(page_title="PMP Trading Suite", layout="wide", page_icon="📈")
 
@@ -39,7 +39,18 @@ if "custom_symbol_label" not in st.session_state:
 data_mode = os.environ.get("DATA_SOURCE", "mock")
 
 symbol = st.sidebar.selectbox("Symbol (index presets)", PRESET_SYMBOLS, index=0)
-lookback_days = st.sidebar.slider("Intraday history (days)", 1, 5, 3)
+
+timeframe_map = {"5 min": "5minute", "15 min": "15minute", "1 hour": "60minute",
+                  "1 day": "day", "1 week": "week", "1 month": "month"}
+timeframe_label = st.sidebar.selectbox("Timeframe", list(timeframe_map.keys()), index=1)
+interval = timeframe_map[timeframe_label]
+
+if interval in ("5minute", "15minute", "60minute"):
+    lookback_days = st.sidebar.slider("Lookback (days)", 1, 5, 3)
+elif interval == "day":
+    lookback_days = st.sidebar.slider("Lookback (days)", 30, 365, 90)
+else:  # week / month
+    lookback_days = st.sidebar.slider("Lookback (days)", 180, 1825, 730)
 
 if data_mode == "mock":
     st.sidebar.warning("⚠️ Running on MOCK data. Set DATA_SOURCE=kite once the API key is added.")
@@ -86,8 +97,10 @@ if data_mode == "upstox":
                 st.rerun()
 
 # A selected custom symbol overrides the preset dropdown
+symbol_display_name = symbol
 if st.session_state["custom_symbol"]:
     symbol = st.session_state["custom_symbol"]
+    symbol_display_name = st.session_state["custom_symbol_label"]
     st.sidebar.info(f"Showing: **{st.session_state['custom_symbol_label']}** (custom)")
 
 st.sidebar.markdown("---")
@@ -97,14 +110,37 @@ st.sidebar.caption("Modules 2-9 (Option Chain, Greeks, Journal, Risk Manager) sh
 # Load data
 # ---------------------------------------------------------------------------
 @st.cache_data(ttl=60)
-def load_data(symbol: str, days: int):
+def load_data(symbol: str, days: int, interval: str):
     ds = get_data_source()
-    intraday = ds.get_intraday_candles(symbol, interval="15minute", days=days)
+    intraday = ds.get_intraday_candles(symbol, interval=interval, days=days)
     daily = ds.get_daily_candles(symbol, days=15)
     return intraday, daily
 
-intraday_df, daily_df = load_data(symbol, lookback_days)
+try:
+    intraday_df, daily_df = load_data(symbol, lookback_days, interval)
+except Exception as e:
+    st.error(f"Could not load data for '{symbol_display_name}': {e}")
+    st.caption("If this is a custom (stock/commodity) symbol, the instrument_key or "
+               "market hours for that segment may need checking.")
+    st.stop()
 intraday_df["date_only"] = pd.to_datetime(intraday_df["datetime"]).dt.date
+
+# Daily/Weekly/Monthly views: VWAP, CPR, Initial Balance, and Regime Detection are all
+# intraday-SESSION concepts (VWAP resets each day, IB = first 60 min of a session, etc.)
+# and don't have a meaningful definition on multi-day bars -- show a plain chart instead
+# of computing session indicators that would otherwise be silently wrong.
+if interval in ("day", "week", "month"):
+    st.title("📊 Regime Dashboard")
+    st.info("VWAP / CPR / Regime Detection are intraday-session tools and only apply to "
+             "5 min / 15 min / 1 hour timeframes. Showing plain price chart for this view.")
+    fig = build_plain_chart(intraday_df, title=f"{symbol_display_name} — {timeframe_label}")
+    st.plotly_chart(fig, use_container_width=True, config={
+        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "eraseshape"],
+        "displaylogo": False,
+    })
+    st.caption("PMP Trading Suite · Phase 1 · For personal signal use only — no order execution. "
+               "Not investment advice.")
+    st.stop()
 
 available_dates = sorted(intraday_df["date_only"].unique())
 selected_date = st.sidebar.selectbox("Session date", available_dates, index=len(available_dates) - 1)
@@ -172,7 +208,7 @@ chart_col, signal_col = st.columns([3, 1])
 
 with chart_col:
     fig = build_regime_chart(day_df, day_vwap, cpr, pdh_pdl, ib,
-                              title=f"{symbol} — 15 Min — {selected_date}")
+                              title=f"{symbol_display_name} — 15 Min — {selected_date}")
     st.plotly_chart(fig, use_container_width=True)
 
 with signal_col:
