@@ -128,6 +128,9 @@ def generate_mock_option_chain(spot_price: float = 25000.0, num_strikes: int = 1
             "ce_volume": int(rng.integers(10000, 500000)),
             "ce_iv": round(rng.uniform(11, 22), 2),
             "ce_delta": round(max(0.01, min(0.99, 0.5 - moneyness * 6)), 3),
+            "ce_gamma": round(abs(rng.normal(0.001, 0.0004)), 5),
+            "ce_theta": round(-abs(rng.normal(15, 8)), 2),
+            "ce_vega": round(abs(rng.normal(8, 3)), 2),
             "pe_oi": pe_base_oi,
             "pe_prev_oi": pe_prev_oi,
             "pe_ltp": round(pe_ltp, 2),
@@ -135,6 +138,9 @@ def generate_mock_option_chain(spot_price: float = 25000.0, num_strikes: int = 1
             "pe_volume": int(rng.integers(10000, 500000)),
             "pe_iv": round(rng.uniform(11, 22), 2),
             "pe_delta": round(max(-0.99, min(-0.01, -0.5 - moneyness * 6)), 3),
+            "pe_gamma": round(abs(rng.normal(0.001, 0.0004)), 5),
+            "pe_theta": round(-abs(rng.normal(15, 8)), 2),
+            "pe_vega": round(abs(rng.normal(8, 3)), 2),
         })
 
     return pd.DataFrame(rows)

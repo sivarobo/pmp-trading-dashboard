@@ -257,6 +257,9 @@ class UpstoxDataSource(BaseDataSource):
                 "ce_volume": ce_md.get("volume", 0),
                 "ce_iv": ce_gr.get("iv", 0),
                 "ce_delta": ce_gr.get("delta", 0),
+                "ce_gamma": ce_gr.get("gamma", 0),
+                "ce_theta": ce_gr.get("theta", 0),
+                "ce_vega": ce_gr.get("vega", 0),
                 "pe_oi": pe_md.get("oi", 0),
                 "pe_prev_oi": pe_md.get("prev_oi", 0),
                 "pe_ltp": pe_md.get("ltp", 0),
@@ -264,6 +267,9 @@ class UpstoxDataSource(BaseDataSource):
                 "pe_volume": pe_md.get("volume", 0),
                 "pe_iv": pe_gr.get("iv", 0),
                 "pe_delta": pe_gr.get("delta", 0),
+                "pe_gamma": pe_gr.get("gamma", 0),
+                "pe_theta": pe_gr.get("theta", 0),
+                "pe_vega": pe_gr.get("vega", 0),
             })
 
         return pd.DataFrame(rows).sort_values("strike_price").reset_index(drop=True)

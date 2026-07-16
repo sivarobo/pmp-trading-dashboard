@@ -100,6 +100,19 @@ def init_db():
                 updated_at TIMESTAMP DEFAULT NOW()
             );
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS greek_positions (
+                id SERIAL PRIMARY KEY,
+                symbol TEXT NOT NULL DEFAULT 'NIFTY 50',
+                strike NUMERIC NOT NULL,
+                option_type TEXT NOT NULL CHECK (option_type IN ('CE', 'PE')),
+                transaction TEXT NOT NULL CHECK (transaction IN ('BUY', 'SELL')),
+                quantity INTEGER NOT NULL,
+                entry_premium NUMERIC,
+                expiry DATE,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
         # ensure a default risk_settings row exists
         cur.execute("""
             INSERT INTO risk_settings (id) VALUES (1)
