@@ -17,7 +17,7 @@ import os
 import pandas as pd
 from abc import ABC, abstractmethod
 
-from modules.mock_data import generate_mock_intraday, generate_mock_daily
+from modules.mock_data import generate_mock_intraday, generate_mock_daily, generate_mock_option_chain
 
 
 class BaseDataSource(ABC):
@@ -36,6 +36,16 @@ class BaseDataSource(ABC):
         """Last traded price."""
         ...
 
+    @abstractmethod
+    def get_option_chain(self, symbol: str, expiry_date: str = None) -> pd.DataFrame:
+        """
+        Returns a flattened option chain DataFrame with columns:
+        ['strike_price','underlying_spot_price',
+         'ce_oi','ce_prev_oi','ce_ltp','ce_close','ce_volume','ce_iv','ce_delta',
+         'pe_oi','pe_prev_oi','pe_ltp','pe_close','pe_volume','pe_iv','pe_delta']
+        """
+        ...
+
 
 # ---------------------------------------------------------------------------
 # MOCK DATA SOURCE  (works fully offline — use this until Kite key arrives)
@@ -50,6 +60,10 @@ class MockDataSource(BaseDataSource):
     def get_ltp(self, symbol: str) -> float:
         intraday = self.get_intraday_candles(symbol, days=1)
         return float(intraday.iloc[-1]["close"])
+
+    def get_option_chain(self, symbol: str, expiry_date: str = None) -> pd.DataFrame:
+        spot = self.get_ltp(symbol)
+        return generate_mock_option_chain(spot_price=spot)
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +157,66 @@ class UpstoxDataSource(BaseDataSource):
         intraday = self.get_intraday_candles(symbol, days=1)
         return float(intraday.iloc[-1]["close"])
 
+    def get_nearest_expiry(self, symbol: str) -> str:
+        """Fetches available option contracts and returns the nearest (soonest) expiry date."""
+        instrument_key = self._instrument_key(symbol)
+        url = "https://api.upstox.com/v2/option/contract"
+        resp = self._requests.get(url, params={"instrument_key": instrument_key},
+                                   headers=self._headers, timeout=15)
+        resp.raise_for_status()
+        payload = resp.json()
+        contracts = payload.get("data", [])
+        expiries = sorted({c["expiry"] for c in contracts if "expiry" in c})
+        if not expiries:
+            raise ValueError(f"No option contracts/expiries found for {symbol}")
+        return expiries[0]
+
+    def get_option_chain(self, symbol: str, expiry_date: str = None) -> pd.DataFrame:
+        instrument_key = self._instrument_key(symbol)
+        if expiry_date is None:
+            expiry_date = self.get_nearest_expiry(symbol)
+
+        url = "https://api.upstox.com/v2/option/chain"
+        resp = self._requests.get(
+            url,
+            params={"instrument_key": instrument_key, "expiry_date": expiry_date},
+            headers=self._headers,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+        raw = payload.get("data", [])
+
+        rows = []
+        for item in raw:
+            ce = item.get("call_options", {}) or {}
+            pe = item.get("put_options", {}) or {}
+            ce_md = ce.get("market_data", {}) or {}
+            pe_md = pe.get("market_data", {}) or {}
+            ce_gr = ce.get("option_greeks", {}) or {}
+            pe_gr = pe.get("option_greeks", {}) or {}
+
+            rows.append({
+                "strike_price": item.get("strike_price"),
+                "underlying_spot_price": item.get("underlying_spot_price"),
+                "ce_oi": ce_md.get("oi", 0),
+                "ce_prev_oi": ce_md.get("prev_oi", 0),
+                "ce_ltp": ce_md.get("ltp", 0),
+                "ce_close": ce_md.get("close_price", 0),
+                "ce_volume": ce_md.get("volume", 0),
+                "ce_iv": ce_gr.get("iv", 0),
+                "ce_delta": ce_gr.get("delta", 0),
+                "pe_oi": pe_md.get("oi", 0),
+                "pe_prev_oi": pe_md.get("prev_oi", 0),
+                "pe_ltp": pe_md.get("ltp", 0),
+                "pe_close": pe_md.get("close_price", 0),
+                "pe_volume": pe_md.get("volume", 0),
+                "pe_iv": pe_gr.get("iv", 0),
+                "pe_delta": pe_gr.get("delta", 0),
+            })
+
+        return pd.DataFrame(rows).sort_values("strike_price").reset_index(drop=True)
+
 
 # ---------------------------------------------------------------------------
 # KITE CONNECT DATA SOURCE  (fill this in once the API key arrives)
@@ -210,6 +284,13 @@ class KiteDataSource(BaseDataSource):
     def get_ltp(self, symbol: str) -> float:
         quote = self.kite.ltp([f"NSE:{symbol}"])
         return quote[f"NSE:{symbol}"]["last_price"]
+
+    def get_option_chain(self, symbol: str, expiry_date: str = None) -> pd.DataFrame:
+        raise NotImplementedError(
+            "Kite option chain requires building it from kite.instruments('NFO') "
+            "(filter by name/expiry/strike) plus kite.quote() for OI/LTP per leg. "
+            "Ask me to build this out if you switch to Kite as the primary data source."
+        )
 
 
 # ---------------------------------------------------------------------------

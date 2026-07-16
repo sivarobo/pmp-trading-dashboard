@@ -10,17 +10,9 @@ in your environment (see README.md) — no code changes needed anywhere else.
 import os
 import pandas as pd
 import streamlit as st
-from dotenv import load_dotenv
 
-load_dotenv()  # picks up .env created by scripts/get_upstox_token.py, if present
-
-# Bridge Streamlit Cloud's "Secrets" into os.environ so modules/data_source.py
-# (which reads os.environ) behaves identically locally and when deployed.
-try:
-    for _key, _value in st.secrets.items():
-        os.environ.setdefault(_key, str(_value))
-except Exception:
-    pass  # no secrets.toml / Cloud Secrets configured yet -- fine, defaults to mock
+from modules.env_setup import init_env
+init_env()
 
 from modules.data_source import get_data_source
 from modules.indicators import (

@@ -90,6 +90,56 @@ def generate_mock_intraday(days: int = 3, base_price: float = 25000.0, seed: int
     return pd.DataFrame(all_rows)
 
 
+def generate_mock_option_chain(spot_price: float = 25000.0, num_strikes: int = 12,
+                                strike_gap: float = 50.0, seed: int = 11) -> pd.DataFrame:
+    """
+    Generates a plausible option chain around spot_price with realistic-ish
+    OI, IV, and delta patterns so the Option Chain Reader can be built/tested
+    before the Upstox connection is live.
+    """
+    rng = np.random.default_rng(seed)
+
+    atm_strike = round(spot_price / strike_gap) * strike_gap
+    strikes = [atm_strike + (i - num_strikes // 2) * strike_gap for i in range(num_strikes)]
+
+    rows = []
+    for k in strikes:
+        moneyness = (k - spot_price) / spot_price  # + = OTM call / ITM put
+
+        # CE side: OI tends to build up on OTM/near strikes (writers sell above spot)
+        ce_base_oi = max(500, int(rng.normal(1_500_000, 400_000) * np.exp(-((moneyness) ** 2) / 0.0008)))
+        ce_prev_oi = int(ce_base_oi * rng.uniform(0.85, 1.15))
+        ce_ltp = max(0.5, (spot_price - k) if k < spot_price else 0) + abs(rng.normal(40, 25))
+        ce_close = max(0.5, ce_ltp * rng.uniform(0.9, 1.1))
+
+        # PE side: mirror, writers sell below spot
+        pe_base_oi = max(500, int(rng.normal(1_500_000, 400_000) * np.exp(-((moneyness) ** 2) / 0.0008)))
+        pe_prev_oi = int(pe_base_oi * rng.uniform(0.85, 1.15))
+        pe_ltp = max(0.5, (k - spot_price) if k > spot_price else 0) + abs(rng.normal(40, 25))
+        pe_close = max(0.5, pe_ltp * rng.uniform(0.9, 1.1))
+
+        rows.append({
+            "strike_price": k,
+            "underlying_spot_price": spot_price,
+            "ce_oi": ce_base_oi,
+            "ce_prev_oi": ce_prev_oi,
+            "ce_ltp": round(ce_ltp, 2),
+            "ce_close": round(ce_close, 2),
+            "ce_volume": int(rng.integers(10000, 500000)),
+            "ce_iv": round(rng.uniform(11, 22), 2),
+            "ce_delta": round(max(0.01, min(0.99, 0.5 - moneyness * 6)), 3),
+            "pe_oi": pe_base_oi,
+            "pe_prev_oi": pe_prev_oi,
+            "pe_ltp": round(pe_ltp, 2),
+            "pe_close": round(pe_close, 2),
+            "pe_volume": int(rng.integers(10000, 500000)),
+            "pe_iv": round(rng.uniform(11, 22), 2),
+            "pe_delta": round(max(-0.99, min(-0.01, -0.5 - moneyness * 6)), 3),
+        })
+
+    return pd.DataFrame(rows)
+
+
 def generate_mock_daily(days: int = 30, base_price: float = 25000.0, seed: int = 7) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     today = pd.Timestamp.now().normalize()
