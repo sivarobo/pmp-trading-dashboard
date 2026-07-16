@@ -134,17 +134,15 @@ display_df = annotated.copy()
 display_df["CE Flow"] = display_df["ce_flow"].map(lambda f: f"{flow_color.get(f,'')} {f}")
 display_df["PE Flow"] = display_df["pe_flow"].map(lambda f: f"{flow_color.get(f,'')} {f}")
 
-# Highlight the ATM strike (closest to spot) and filter to a strike window around it
+# Highlight the ATM strike (closest to spot) and trim to the selected window around it
 if spot_price:
     display_df["dist"] = (display_df["strike_price"] - spot_price).abs()
     atm_strike = display_df.loc[display_df["dist"].idxmin(), "strike_price"]
-
-    unique_strikes = sorted(display_df["strike_price"].unique())
-    atm_idx = unique_strikes.index(atm_strike)
-    lo = max(0, atm_idx - strike_window)
-    hi = min(len(unique_strikes), atm_idx + strike_window + 1)
-    strikes_in_window = unique_strikes[lo:hi]
-    display_df = display_df[display_df["strike_price"].isin(strikes_in_window)]
+    sorted_strikes = sorted(display_df["strike_price"].unique())
+    atm_idx = sorted_strikes.index(atm_strike)
+    lo = sorted_strikes[max(0, atm_idx - strike_window)]
+    hi = sorted_strikes[min(len(sorted_strikes) - 1, atm_idx + strike_window)]
+    display_df = display_df[(display_df["strike_price"] >= lo) & (display_df["strike_price"] <= hi)]
 else:
     atm_strike = None
 
@@ -170,10 +168,11 @@ st.dataframe(
         "Strike": "{:,.0f}",
     }),
     use_container_width=True,
-    height=600,
+    height=420,
 )
 
-st.caption("💡 Tip: scroll with your cursor over the table (not the page) to keep the header row fixed in place.")
+st.caption("💡 The header freezes automatically **inside this table's own scroll area** — "
+           "hover your cursor directly over the rows (not the page's right-edge scrollbar) and scroll there.")
 
 st.caption(
     "🟢 Long Buildup (OI↑ price↑) · 🔴 Short Buildup / Writing (OI↑ price↓) · "

@@ -124,7 +124,11 @@ except Exception as e:
     st.caption("If this is a custom (stock/commodity) symbol, the instrument_key or "
                "market hours for that segment may need checking.")
     st.stop()
-intraday_df["date_only"] = pd.to_datetime(intraday_df["datetime"]).dt.date
+
+if intraday_df.empty:
+    st.warning(f"No candle data returned for '{symbol_display_name}'. "
+               f"Market may be closed for this instrument, or the timeframe/lookback window has no data.")
+    st.stop()
 
 # Daily/Weekly/Monthly views: VWAP, CPR, Initial Balance, and Regime Detection are all
 # intraday-SESSION concepts (VWAP resets each day, IB = first 60 min of a session, etc.)
@@ -142,6 +146,8 @@ if interval in ("day", "week", "month"):
     st.caption("PMP Trading Suite · Phase 1 · For personal signal use only — no order execution. "
                "Not investment advice.")
     st.stop()
+
+intraday_df["date_only"] = pd.to_datetime(intraday_df["datetime"]).dt.date
 
 available_dates = sorted(intraday_df["date_only"].unique())
 selected_date = st.sidebar.selectbox("Session date", available_dates, index=len(available_dates) - 1)
