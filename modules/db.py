@@ -20,7 +20,7 @@ import psycopg2.extras
 
 
 @st.cache_resource
-def get_connection():
+def _create_connection():
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:
         raise EnvironmentError(
@@ -29,6 +29,25 @@ def get_connection():
         )
     conn = psycopg2.connect(db_url)
     conn.autocommit = True
+    return conn
+
+
+def get_connection():
+    """
+    Neon's serverless compute auto-suspends after idle time, which silently closes
+    cached connections. This checks the cached connection is actually alive and
+    transparently reconnects if Neon has dropped it, instead of raising
+    'connection already closed' on every subsequent page load.
+    """
+    conn = _create_connection()
+    try:
+        if conn.closed != 0:
+            raise psycopg2.InterfaceError("connection closed")
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+    except (psycopg2.OperationalError, psycopg2.InterfaceError):
+        _create_connection.clear()
+        conn = _create_connection()
     return conn
 
 
