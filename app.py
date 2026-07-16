@@ -220,7 +220,7 @@ chart_col, signal_col = st.columns([3, 1])
 
 with chart_col:
     fig = build_regime_chart(day_df, day_vwap, cpr, pdh_pdl, ib, weekly_hl=weekly_hl,
-                              title=f"{symbol_display_name} — 15 Min — {selected_date}")
+                              title=f"{symbol_display_name} — {timeframe_label} — {selected_date}")
     st.plotly_chart(fig, use_container_width=True, config={
         "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "eraseshape"],
         "displaylogo": False,
