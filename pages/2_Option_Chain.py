@@ -36,6 +36,8 @@ if data_mode == "mock":
 else:
     st.sidebar.success(f"✅ Live data source: {data_mode.upper()}")
 
+strike_window = st.sidebar.slider("Strikes around ATM (each side)", 5, 30, 12)
+
 auto_refresh = st.sidebar.checkbox("Auto-refresh every 60s", value=False)
 if auto_refresh:
     st.sidebar.caption("Re-run the page (R key / rerun button) to refresh manually if auto-refresh isn't wired to a timer in this environment.")
@@ -132,10 +134,17 @@ display_df = annotated.copy()
 display_df["CE Flow"] = display_df["ce_flow"].map(lambda f: f"{flow_color.get(f,'')} {f}")
 display_df["PE Flow"] = display_df["pe_flow"].map(lambda f: f"{flow_color.get(f,'')} {f}")
 
-# Highlight the ATM strike (closest to spot)
+# Highlight the ATM strike (closest to spot) and filter to a strike window around it
 if spot_price:
     display_df["dist"] = (display_df["strike_price"] - spot_price).abs()
     atm_strike = display_df.loc[display_df["dist"].idxmin(), "strike_price"]
+
+    unique_strikes = sorted(display_df["strike_price"].unique())
+    atm_idx = unique_strikes.index(atm_strike)
+    lo = max(0, atm_idx - strike_window)
+    hi = min(len(unique_strikes), atm_idx + strike_window + 1)
+    strikes_in_window = unique_strikes[lo:hi]
+    display_df = display_df[display_df["strike_price"].isin(strikes_in_window)]
 else:
     atm_strike = None
 
@@ -151,7 +160,7 @@ table_view = display_df[table_cols].rename(columns={
 
 def highlight_atm(row):
     if atm_strike is not None and row["Strike"] == atm_strike:
-        return ["background-color: #2a2e39"] * len(row)
+        return ["background-color: #3d4451; color: #ffffff; font-weight: 600"] * len(row)
     return [""] * len(row)
 
 st.dataframe(
@@ -161,8 +170,10 @@ st.dataframe(
         "Strike": "{:,.0f}",
     }),
     use_container_width=True,
-    height=480,
+    height=600,
 )
+
+st.caption("💡 Tip: scroll with your cursor over the table (not the page) to keep the header row fixed in place.")
 
 st.caption(
     "🟢 Long Buildup (OI↑ price↑) · 🔴 Short Buildup / Writing (OI↑ price↓) · "
