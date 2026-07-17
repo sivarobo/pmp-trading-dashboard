@@ -26,10 +26,17 @@ def calculate_vwap(df: pd.DataFrame) -> pd.Series:
     for _, day_idx in df.groupby("date").groups.items():
         day_slice = df.loc[day_idx]
         tp = typical_price.loc[day_idx]
-        cum_vol = day_slice["volume"].cumsum()
-        cum_vol_price = (tp * day_slice["volume"]).cumsum()
-        # avoid div-by-zero on the very first bar if volume is 0
-        vwap.loc[day_idx] = np.where(cum_vol > 0, cum_vol_price / cum_vol, tp)
+        cum_vol = day_slice["volume"].cumsum().astype(float)
+        cum_vol_price = (tp * day_slice["volume"]).cumsum().astype(float)
+
+        # np.where evaluates BOTH branches eagerly, so cum_vol_price/cum_vol still runs
+        # even on rows where cum_vol is 0 (e.g. the very first tick of an illiquid
+        # instrument before any volume prints) -- that raised ZeroDivisionError in
+        # production. Replacing 0 with NaN first makes the division always safe
+        # (NaN result, no exception), then fillna() supplies the typical-price fallback.
+        safe_cum_vol = cum_vol.replace(0, np.nan)
+        computed = cum_vol_price / safe_cum_vol
+        vwap.loc[day_idx] = computed.fillna(tp).values
 
     return vwap
 
