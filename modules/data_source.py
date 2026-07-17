@@ -46,6 +46,11 @@ class BaseDataSource(ABC):
         """
         ...
 
+    def get_available_expiries(self, symbol: str) -> list:
+        """Returns all available expiry dates, soonest first. Needed for Calendar/Diagonal
+        spreads which use two different expiries. Default: not implemented."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement get_available_expiries().")
+
 
 # ---------------------------------------------------------------------------
 # MOCK DATA SOURCE  (works fully offline — use this until Kite key arrives)
@@ -63,7 +68,14 @@ class MockDataSource(BaseDataSource):
 
     def get_option_chain(self, symbol: str, expiry_date: str = None) -> pd.DataFrame:
         spot = self.get_ltp(symbol)
-        return generate_mock_option_chain(spot_price=spot)
+        # vary IV/premium slightly by expiry so near/far chains aren't identical in mock mode
+        seed = 11 if expiry_date is None or expiry_date == self.get_available_expiries(symbol)[0] else 23
+        return generate_mock_option_chain(spot_price=spot, seed=seed)
+
+    def get_available_expiries(self, symbol: str) -> list:
+        near = (pd.Timestamp.now() + pd.Timedelta(days=7)).strftime("%Y-%m-%d")
+        far = (pd.Timestamp.now() + pd.Timedelta(days=14)).strftime("%Y-%m-%d")
+        return [near, far]
 
 
 # ---------------------------------------------------------------------------
@@ -210,6 +222,14 @@ class UpstoxDataSource(BaseDataSource):
 
     def get_nearest_expiry(self, symbol: str) -> str:
         """Fetches available option contracts and returns the nearest (soonest) expiry date."""
+        expiries = self.get_available_expiries(symbol)
+        if not expiries:
+            raise ValueError(f"No option contracts/expiries found for {symbol}")
+        return expiries[0]
+
+    def get_available_expiries(self, symbol: str) -> list:
+        """Returns ALL available expiry dates (sorted, soonest first) -- needed for
+        Calendar/Diagonal spreads which use two different expiries."""
         instrument_key = self._instrument_key(symbol)
         url = "https://api.upstox.com/v2/option/contract"
         resp = self._requests.get(url, params={"instrument_key": instrument_key},
@@ -217,10 +237,7 @@ class UpstoxDataSource(BaseDataSource):
         resp.raise_for_status()
         payload = resp.json()
         contracts = payload.get("data", [])
-        expiries = sorted({c["expiry"] for c in contracts if "expiry" in c})
-        if not expiries:
-            raise ValueError(f"No option contracts/expiries found for {symbol}")
-        return expiries[0]
+        return sorted({c["expiry"] for c in contracts if "expiry" in c})
 
     def get_option_chain(self, symbol: str, expiry_date: str = None) -> pd.DataFrame:
         instrument_key = self._instrument_key(symbol)
