@@ -111,6 +111,13 @@ def init_db():
         cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS realized_pnl NUMERIC;")
         cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS roll_type TEXT;")
         cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS roll_reason TEXT;")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS custom_indicators (
+                name TEXT PRIMARY KEY,
+                code TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
         # ensure a default risk_settings row exists
         cur.execute("""
             INSERT INTO risk_settings (id) VALUES (1)

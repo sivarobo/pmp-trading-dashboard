@@ -5,6 +5,7 @@ plotly>=5.20
 python-dotenv>=1.0
 requests>=2.31
 psycopg2-binary>=2.9
+streamlit-lightweight-charts>=0.7
 
 # Uncomment once Zerodha Kite Connect API key is available:
 # kiteconnect>=5.0
