@@ -23,16 +23,19 @@ def add_position(strike: float, option_type: str, transaction: str, quantity: in
         """, (symbol, strike, option_type, transaction, quantity, entry_premium, expiry))
 
 
-def get_positions() -> pd.DataFrame:
+def get_positions(status: str = "OPEN") -> pd.DataFrame:
     conn = get_connection()
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute("SELECT * FROM greek_positions ORDER BY created_at DESC")
+        if status == "ALL":
+            cur.execute("SELECT * FROM greek_positions ORDER BY created_at DESC")
+        else:
+            cur.execute("SELECT * FROM greek_positions WHERE status = %s ORDER BY created_at DESC", (status,))
         rows = cur.fetchall()
     df = pd.DataFrame(rows) if rows else pd.DataFrame()
     if not df.empty:
         # psycopg2 returns Postgres NUMERIC columns as Decimal, which doesn't mix
         # with float/numpy arithmetic elsewhere -- normalize to float right here.
-        for col in ("strike", "entry_premium"):
+        for col in ("strike", "entry_premium", "realized_pnl"):
             if col in df.columns:
                 df[col] = df[col].astype(float)
         if "quantity" in df.columns:

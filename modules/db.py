@@ -101,6 +101,16 @@ def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
+        # Module 6 (Adjustment Techniques) support: roll lineage tracking.
+        # Using ADD COLUMN IF NOT EXISTS so this is safe to run against a table
+        # that already existed before these columns were added.
+        cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'OPEN';")
+        cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS parent_id INTEGER;")
+        cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS roll_count INTEGER NOT NULL DEFAULT 0;")
+        cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP;")
+        cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS realized_pnl NUMERIC;")
+        cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS roll_type TEXT;")
+        cur.execute("ALTER TABLE greek_positions ADD COLUMN IF NOT EXISTS roll_reason TEXT;")
         # ensure a default risk_settings row exists
         cur.execute("""
             INSERT INTO risk_settings (id) VALUES (1)
