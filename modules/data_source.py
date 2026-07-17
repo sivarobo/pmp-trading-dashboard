@@ -109,6 +109,7 @@ class UpstoxDataSource(BaseDataSource):
         "NIFTY 50": "NSE_INDEX|Nifty 50",
         "NIFTY BANK": "NSE_INDEX|Nifty Bank",
         "SENSEX": "BSE_INDEX|SENSEX",
+        "INDIA VIX": "NSE_INDEX|India VIX",
     }
 
     INTERVAL_MAP = {

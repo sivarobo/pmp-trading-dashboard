@@ -166,7 +166,81 @@ h2, h3 { font-weight: 600 !important; color: var(--pmp-text) !important; }
 /* Captions */
 .stCaption, [data-testid="stCaptionContainer"] {
     color: var(--pmp-muted) !important;
+}/* Hide Streamlit's auto-generated sidebar page list -- navigation now lives
+   in the top navbar (modules/navbar.py). The sidebar itself stays available
+   for page-specific filters/settings. */
+div[data-testid="stSidebarNav"] {
+    display: none;
 }
+
+/* Top navbar */
+div[data-testid="stPageLink"] {
+    text-align: center;
+}
+div[data-testid="stPageLink"] a {
+    display: block;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 8px;
+    color: var(--pmp-muted) !important;
+    font-weight: 500;
+    font-size: 13px;
+    text-decoration: none !important;
+    transition: all 0.15s ease;
+}
+div[data-testid="stPageLink"] a:hover {
+    background: var(--pmp-accent-soft);
+    color: var(--pmp-accent) !important;
+}
+.pmp-nav-active {
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 8px;
+    background: var(--pmp-accent-soft);
+    color: var(--pmp-accent) !important;
+    font-weight: 600;
+    font-size: 13px;
+}
+hr.pmp-nav-rule {
+    margin: 4px 0 18px 0;
+    border: none;
+    border-top: 1px solid var(--pmp-line);
+}
+
+/* Ticker bar */
+.pmp-ticker {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--pmp-line);
+    border-radius: 12px;
+    background: var(--pmp-card);
+    margin-bottom: 18px;
+    overflow: hidden;
+}
+.pmp-ticker-cell {
+    flex: 1;
+    padding: 10px 18px;
+    border-right: 1px solid var(--pmp-line);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.pmp-ticker-cell:last-child {
+    border-right: none;
+}
+.pmp-ticker-cell .s {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--pmp-muted);
+}
+.pmp-ticker-cell .p {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--pmp-text);
+}
+
 </style>
 """
 

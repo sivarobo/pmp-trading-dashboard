@@ -10,6 +10,7 @@ from modules.env_setup import init_env
 init_env()
 
 from modules.theme import apply_theme
+from modules.navbar import render_navbar, render_ticker
 
 from modules.data_source import get_data_source
 from modules.strategy import (
@@ -19,6 +20,8 @@ from modules.strategy import (
 
 st.set_page_config(page_title="Strategy Builder — PMP Trading Suite", layout="wide", page_icon="🏗️")
 apply_theme()
+render_ticker()
+render_navbar(current="Strategy")
 
 st.sidebar.title("🏗️ Strategy Builder")
 st.sidebar.caption("Module 5 — Hedged Option Selling")

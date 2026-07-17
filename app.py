@@ -22,14 +22,17 @@ from modules.indicators import (
 )
 from modules.chart import build_regime_chart, build_plain_chart
 from modules.theme import apply_theme
+from modules.navbar import render_navbar, render_ticker
 
 st.set_page_config(page_title="PMP Trading Suite", layout="wide", page_icon="📈")
 apply_theme()
+render_ticker()
+render_navbar(current="Dashboard")
 
 # ---------------------------------------------------------------------------
-# Sidebar
+# Sidebar (filters/settings only -- page navigation now lives in the top navbar)
 # ---------------------------------------------------------------------------
-st.sidebar.title("⚙️ PMP Trading Suite")
+st.sidebar.title("⚙️ Filters")
 st.sidebar.caption("Phase 1 — Regime Dashboard")
 
 PRESET_SYMBOLS = ["NIFTY 50", "NIFTY BANK", "SENSEX"]

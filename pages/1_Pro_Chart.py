@@ -16,6 +16,7 @@ from modules.env_setup import init_env
 init_env()
 
 from modules.theme import apply_theme
+from modules.navbar import render_navbar, render_ticker
 
 from modules.data_source import get_data_source
 from modules.indicators import calculate_vwap, calculate_cpr, prev_day_high_low
@@ -31,6 +32,8 @@ except ImportError:
 
 st.set_page_config(page_title="Pro Chart — PMP Trading Suite", layout="wide", page_icon="📉")
 apply_theme()
+render_ticker()
+render_navbar(current="Pro Chart")
 
 st.sidebar.title("📉 Pro Chart")
 st.sidebar.caption("TradingView Lightweight Charts + Custom Indicators")

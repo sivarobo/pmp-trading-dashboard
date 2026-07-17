@@ -15,9 +15,12 @@ from modules.env_setup import init_env
 init_env()
 
 from modules.theme import apply_theme
+from modules.navbar import render_navbar, render_ticker
 
 st.set_page_config(page_title="Order Preview — PMP Trading Suite", layout="wide", page_icon="🧾")
 apply_theme()
+render_ticker()
+render_navbar(current="Order Preview")
 
 st.sidebar.title("🧾 Order Preview")
 st.sidebar.caption("Builds a clean order summary — does NOT place orders via API.")

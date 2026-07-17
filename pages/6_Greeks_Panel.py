@@ -10,6 +10,7 @@ from modules.env_setup import init_env
 init_env()
 
 from modules.theme import apply_theme
+from modules.navbar import render_navbar, render_ticker
 
 from modules.db import init_db
 from modules.data_source import get_data_source
@@ -20,6 +21,8 @@ from modules.greeks import (
 
 st.set_page_config(page_title="Greeks Panel — PMP Trading Suite", layout="wide", page_icon="🧮")
 apply_theme()
+render_ticker()
+render_navbar(current="Greeks")
 
 try:
     init_db()

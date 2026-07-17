@@ -14,6 +14,7 @@ from modules.env_setup import init_env
 init_env()
 
 from modules.theme import apply_theme
+from modules.navbar import render_navbar, render_ticker
 
 from modules.data_source import get_data_source
 from modules.option_chain import (
@@ -23,6 +24,8 @@ from modules.option_chain import (
 
 st.set_page_config(page_title="Option Chain Reader — PMP Trading Suite", layout="wide", page_icon="🔗")
 apply_theme()
+render_ticker()
+render_navbar(current="Option Chain")
 
 # ---------------------------------------------------------------------------
 # Sidebar
