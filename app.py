@@ -21,8 +21,10 @@ from modules.indicators import (
     weekly_high_low, volume_confirmation,
 )
 from modules.chart import build_regime_chart, build_plain_chart
+from modules.theme import apply_theme
 
 st.set_page_config(page_title="PMP Trading Suite", layout="wide", page_icon="📈")
+apply_theme()
 
 # ---------------------------------------------------------------------------
 # Sidebar

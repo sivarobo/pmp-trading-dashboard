@@ -9,10 +9,13 @@ from datetime import date, time
 from modules.env_setup import init_env
 init_env()
 
+from modules.theme import apply_theme
+
 from modules.db import init_db
 from modules.journal import add_entry, get_entries, delete_entry, compute_stats
 
 st.set_page_config(page_title="Trading Journal — PMP Trading Suite", layout="wide", page_icon="📝")
+apply_theme()
 
 try:
     init_db()

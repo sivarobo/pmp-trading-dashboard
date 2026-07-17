@@ -13,6 +13,8 @@ import pandas as pd
 from modules.env_setup import init_env
 init_env()
 
+from modules.theme import apply_theme
+
 from modules.data_source import get_data_source
 from modules.option_chain import (
     annotate_chain, compute_pcr, compute_max_pain,
@@ -20,6 +22,7 @@ from modules.option_chain import (
 )
 
 st.set_page_config(page_title="Option Chain Reader — PMP Trading Suite", layout="wide", page_icon="🔗")
+apply_theme()
 
 # ---------------------------------------------------------------------------
 # Sidebar

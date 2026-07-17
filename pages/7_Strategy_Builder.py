@@ -9,6 +9,8 @@ import plotly.graph_objects as go
 from modules.env_setup import init_env
 init_env()
 
+from modules.theme import apply_theme
+
 from modules.data_source import get_data_source
 from modules.strategy import (
     STRATEGY_TEMPLATES, build_scaled_legs, compute_strategy_stats,
@@ -16,6 +18,7 @@ from modules.strategy import (
 )
 
 st.set_page_config(page_title="Strategy Builder — PMP Trading Suite", layout="wide", page_icon="🏗️")
+apply_theme()
 
 st.sidebar.title("🏗️ Strategy Builder")
 st.sidebar.caption("Module 5 — Hedged Option Selling")

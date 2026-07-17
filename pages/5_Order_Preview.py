@@ -14,7 +14,10 @@ from datetime import date, datetime
 from modules.env_setup import init_env
 init_env()
 
+from modules.theme import apply_theme
+
 st.set_page_config(page_title="Order Preview — PMP Trading Suite", layout="wide", page_icon="🧾")
+apply_theme()
 
 st.sidebar.title("🧾 Order Preview")
 st.sidebar.caption("Builds a clean order summary — does NOT place orders via API.")

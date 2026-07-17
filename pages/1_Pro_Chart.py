@@ -15,6 +15,8 @@ import pandas as pd
 from modules.env_setup import init_env
 init_env()
 
+from modules.theme import apply_theme
+
 from modules.data_source import get_data_source
 from modules.indicators import calculate_vwap, calculate_cpr, prev_day_high_low
 from modules.custom_indicators import (
@@ -28,6 +30,7 @@ except ImportError:
     LWC_AVAILABLE = False
 
 st.set_page_config(page_title="Pro Chart — PMP Trading Suite", layout="wide", page_icon="📉")
+apply_theme()
 
 st.sidebar.title("📉 Pro Chart")
 st.sidebar.caption("TradingView Lightweight Charts + Custom Indicators")
