@@ -57,32 +57,33 @@ div[data-testid="stMetric"] {
     border-radius: 14px;
     padding: 12px 14px;
     box-shadow: 0 1px 2px rgba(16,24,40,0.04);
-    overflow: visible;
+    overflow: visible !important;
 }
-div[data-testid="stMetricLabel"] {
+div[data-testid="stMetric"] * {
+    overflow: visible !important;
+    text-overflow: unset !important;
+    white-space: normal !important;
+}
+div[data-testid="stMetricLabel"],
+div[data-testid="stMetricLabel"] * {
     font-size: 10.5px !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--pmp-muted) !important;
     font-weight: 600 !important;
-    white-space: normal !important;
-    overflow: visible !important;
 }
-div[data-testid="stMetricValue"] {
+div[data-testid="stMetricValue"],
+div[data-testid="stMetricValue"] * {
     font-family: 'Roboto Mono', monospace !important;
     font-weight: 700 !important;
     color: var(--pmp-text) !important;
-    font-size: 1.25rem !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
+    font-size: 1.15rem !important;
     word-break: break-word;
     line-height: 1.25 !important;
 }
-div[data-testid="stMetricDelta"] {
+div[data-testid="stMetricDelta"],
+div[data-testid="stMetricDelta"] * {
     font-size: 11.5px !important;
-    white-space: normal !important;
-    overflow: visible !important;
 }
 
 /* Buttons -- pill style, accent blue */
